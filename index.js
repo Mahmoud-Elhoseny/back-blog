@@ -13,7 +13,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const port = process.env.PORT || 8000;
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: ['https://front-blog-eight.vercel.app', 'http://localhost:3000', 'https://back-blog-1.onrender.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/travel', travelRoutes);
