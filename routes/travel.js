@@ -18,11 +18,18 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 
 router.post('/add-travel', authenticatedToken, addTravel);
+
+// get all travels
+
 router.get('/get-all-travels', authenticatedToken, getTravels);
+
 router.put('/update-travel/:id', authenticatedToken, editTravel);
 router.delete('/delete-travel/:id', authenticatedToken, deleteTravel);
+
 router.put('/update-is-fav/:id', authenticatedToken, editFav);
 router.post('/search', authenticatedToken, searchTravel);
+
+// image upload
 
 router.post('/image-upload', upload.single('image'), (req, res) => {
   try {
@@ -31,6 +38,28 @@ router.post('/image-upload', upload.single('image'), (req, res) => {
     }
     const imageUrl = `http://localhost:8000/uploads/${req.file.filename}`;
     res.status(200).json({ imageUrl });
+  } catch (error) {
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+// delete image
+
+router.delete('/delete-image', async (req, res) => {
+  const { imageUrl } = req.query;
+
+  if (!imageUrl) {
+    return res.status(400).json({ error: 'No image url provided' });
+  }
+  try {
+    const filename = path.basename(imageUrl);
+    const filePath = path.join(__dirname, '../uploads', filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.status(200).json({ message: 'Image deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Image not found' });
+    }
   } catch (error) {
     res.status(500).json({ error: true, message: error.message });
   }
