@@ -8,7 +8,6 @@ import {
   searchTravel,
 } from '../controllers/travel.js';
 import { authenticatedToken } from '../utilites.js';
-import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import upload from '../multer.js';
@@ -18,30 +17,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
 
-const corsOptions = {
-  origin: [
-    'https://front-blog-eight.vercel.app',
-    'https://front-blog-76i4gd87g-mahmoudelhosenys-projects.vercel.app',
-    'http://localhost:3000',
-    'https://back-blog-1.onrender.com'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
+router.post('/add-travel', authenticatedToken, addTravel);
+router.get('/get-all-travels', authenticatedToken, getTravels);
+router.put('/update-travel/:id', authenticatedToken, editTravel);
+router.delete('/delete-travel/:id', authenticatedToken, deleteTravel);
+router.put('/update-is-fav/:id', authenticatedToken, editFav);
+router.post('/search', authenticatedToken, searchTravel);
 
-// Add OPTIONS handlers for all routes
-router.options('*', cors(corsOptions));
-
-// Apply cors to all routes
-router.post('/add-travel', cors(corsOptions), authenticatedToken, addTravel);
-router.get('/get-all-travels', cors(corsOptions), authenticatedToken, getTravels);
-router.put('/update-travel/:id', cors(corsOptions), authenticatedToken, editTravel);
-router.delete('/delete-travel/:id', cors(corsOptions), authenticatedToken, deleteTravel);
-router.put('/update-is-fav/:id', cors(corsOptions), authenticatedToken, editFav);
-router.post('/search', cors(corsOptions), authenticatedToken, searchTravel);
-
-router.post('/image-upload', cors(corsOptions), upload.single('image'), (req, res) => {
+router.post('/image-upload', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
