@@ -14,7 +14,12 @@ const __dirname = path.dirname(__filename);
 const port = process.env.PORT || 8000;
 
 app.use(cors({
-  origin: ['https://front-blog-eight.vercel.app', 'http://localhost:3000', 'https://back-blog-1.onrender.com'],
+  origin: [
+    'https://front-blog-eight.vercel.app',
+    'https://front-blog-76i4gd87g-mahmoudelhosenys-projects.vercel.app',
+    'http://localhost:3000',
+    'https://back-blog-1.onrender.com'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
