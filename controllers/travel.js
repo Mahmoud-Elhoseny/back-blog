@@ -130,7 +130,9 @@ export const editTravel = async (req, res) => {
           }
         );
       } else {
-        return res.status(403).json({ error: 'Not authorized to edit this travel' });
+        return res
+          .status(403)
+          .json({ error: 'Not authorized to edit this travel' });
       }
     });
   });
