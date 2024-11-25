@@ -36,7 +36,11 @@ router.post('/image-upload', upload.single('image'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const imageUrl = `https://back-blog-1.onrender.com/uploads/${req.file.filename}`;
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://back-blog-2-gdeh.onrender.com'
+      : process.env.BASE_URL;
+    
+    const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
     res.status(200).json({ imageUrl });
   } catch (error) {
     res.status(500).json({ error: true, message: error.message });

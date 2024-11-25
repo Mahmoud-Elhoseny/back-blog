@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
-  maxAge: 7200
+  maxAge: 7200,
 };
 
 // Apply CORS middleware first
@@ -35,6 +36,11 @@ app.use('/auth', authRoutes);
 app.use('/travel', travelRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)){
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
