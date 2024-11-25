@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const addTravel = async (req, res) => {
-  const { title, story, visitedLocation, isFav, image, visitedDate } = req.body;
+  const { title, story, visitedLocation, image, visitedDate } = req.body;
   const { id: userId } = req.user;
 
   const locationArray = Array.isArray(visitedLocation)
@@ -19,13 +19,13 @@ export const addTravel = async (req, res) => {
   }
 
   const sql = `
-    INSERT INTO travels (title, story, visitedLocation, isFav, image, visitedDate, userId)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO travels (title, story, visitedLocation, image, visitedDate, userId)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
   db.run(
     sql,
-    [title, story, JSON.stringify(locationArray), isFav, image, visitedDate, userId],
+    [title, story, JSON.stringify(locationArray), image, visitedDate, userId],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -36,7 +36,7 @@ export const addTravel = async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
         res.status(201).json({ 
-          story: {...travel, visitedLocation: JSON.parse(travel.visitedLocation)}, 
+          story: {...travel, visitedLocation: JSON.parse(travel.visitedLocation), isFav: false}, 
           message: 'Travel added successfully.' 
         });
       });
@@ -45,9 +45,17 @@ export const addTravel = async (req, res) => {
 };
 
 export const getTravels = async (req, res) => {
-  const sql = `SELECT * FROM travels ORDER BY isFav DESC`;
+  const { id: userId } = req.user;
   
-  db.all(sql, [], (err, travels) => {
+  const sql = `
+    SELECT t.*, 
+           CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as isFav
+    FROM travels t
+    LEFT JOIN favorites f ON t.id = f.travelId AND f.userId = ?
+    ORDER BY t.createdAt DESC
+  `;
+  
+  db.all(sql, [userId], (err, travels) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -55,6 +63,7 @@ export const getTravels = async (req, res) => {
     const transformedTravels = travels.map((travel) => ({
       ...travel,
       visitedLocation: JSON.parse(travel.visitedLocation),
+      isFav: Boolean(travel.isFav)
     }));
 
     res.status(200).json(transformedTravels);
@@ -136,10 +145,10 @@ export const deleteTravel = async (req, res) => {
 
 export const editFav = async (req, res) => {
   const { isFav } = req.body;
-  const { id } = req.params;
+  const { id: travelId } = req.params;
   const { id: userId } = req.user;
 
-  db.get('SELECT * FROM travels WHERE id = ?', [id], (err, travel) => {
+  db.get('SELECT * FROM travels WHERE id = ?', [travelId], (err, travel) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -147,16 +156,31 @@ export const editFav = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    db.run(
-      'UPDATE travels SET isFav = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
-      [isFav, id],
-      (err) => {
-        if (err) {
-          return res.status(500).json({ error: err.message });
+    if (isFav) {
+      // Add to favorites
+      db.run(
+        'INSERT OR IGNORE INTO favorites (userId, travelId) VALUES (?, ?)',
+        [userId, travelId],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          res.status(200).json({ message: 'Added to favorites successfully' });
         }
-        res.status(200).json({ message: 'Favorite status updated successfully' });
-      }
-    );
+      );
+    } else {
+      // Remove from favorites
+      db.run(
+        'DELETE FROM favorites WHERE userId = ? AND travelId = ?',
+        [userId, travelId],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          res.status(200).json({ message: 'Removed from favorites successfully' });
+        }
+      );
+    }
   });
 };
 

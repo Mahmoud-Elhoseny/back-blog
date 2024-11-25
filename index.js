@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
 import fs from 'fs';
+import userRoutes from './routes/user.js';
 
 dotenv.config();
 
@@ -36,10 +37,11 @@ app.use('/auth', authRoutes);
 app.use('/travel', travelRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/users', userRoutes);
 
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)){
-    fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 app.listen(port, () => {

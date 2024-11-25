@@ -36,7 +36,6 @@ function createTables() {
       title TEXT NOT NULL,
       story TEXT NOT NULL,
       visitedLocation TEXT NOT NULL,
-      isFav BOOLEAN DEFAULT 0,
       image TEXT NOT NULL,
       visitedDate TEXT NOT NULL,
       userId INTEGER NOT NULL,
@@ -58,6 +57,14 @@ function createTables() {
       FOREIGN KEY (travelId) REFERENCES travels(id)
     )
   `);
+
+  db.run(`
+    ALTER TABLE travels DROP COLUMN isFav;
+  `, (err) => {
+    if (err && !err.message.includes('no such column')) {
+      console.error('Error removing isFav column:', err);
+    }
+  });
 }
 
-export default db; 
+export default db;
