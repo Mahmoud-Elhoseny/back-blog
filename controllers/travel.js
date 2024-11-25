@@ -1,17 +1,10 @@
 import fs from 'fs';
-import Travel from '../models/Travel.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Op, Sequelize } from 'sequelize';
+import db from '../config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-function parseCustomDate(dateStr) {
-  // Remove ordinal indicators (st, nd, rd, th)
-  const cleanDate = dateStr.replace(/(st|nd|rd|th)/, '');
-  return new Date(cleanDate);
-}
 
 export const addTravel = async (req, res) => {
   const { title, story, visitedLocation, isFav, image, visitedDate } = req.body;
@@ -22,47 +15,50 @@ export const addTravel = async (req, res) => {
     : JSON.parse(visitedLocation);
 
   if (!title || !story || !image || !visitedDate || !userId) {
-    return res
-      .status(400)
-      .json({ error: 'Please fill in all required fields.' });
+    return res.status(400).json({ error: 'Please fill in all required fields.' });
   }
 
-  try {
-    const travel = await Travel.create({
-      title,
-      story,
-      visitedLocation: locationArray,
-      isFav,
-      image,
-      visitedDate,
-      userId,
-    });
-    await travel.save();
-    res
-      .status(201)
-      .json({ story: travel, message: 'Travel added successfully.' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  const sql = `
+    INSERT INTO travels (title, story, visitedLocation, isFav, image, visitedDate, userId)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(
+    sql,
+    [title, story, JSON.stringify(locationArray), isFav, image, visitedDate, userId],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      
+      db.get('SELECT * FROM travels WHERE id = ?', [this.lastID], (err, travel) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ 
+          story: {...travel, visitedLocation: JSON.parse(travel.visitedLocation)}, 
+          message: 'Travel added successfully.' 
+        });
+      });
+    }
+  );
 };
 
 export const getTravels = async (req, res) => {
-  try {
-    const travels = await Travel.findAll({
-      order: [['isFav', 'DESC']],
-      raw: true,
-    });
-
+  const sql = `SELECT * FROM travels ORDER BY isFav DESC`;
+  
+  db.all(sql, [], (err, travels) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
     const transformedTravels = travels.map((travel) => ({
       ...travel,
       visitedLocation: JSON.parse(travel.visitedLocation),
     }));
 
     res.status(200).json(transformedTravels);
-  } catch (error) {
-    console.error('Error in getTravels:', error);
-    res.status(500).json({ error: error.message });
-  }
+  });
 };
 
 export const editTravel = async (req, res) => {
@@ -74,75 +70,94 @@ export const editTravel = async (req, res) => {
     ? visitedLocation
     : JSON.parse(visitedLocation);
 
-  const travel = await Travel.findByPk(id);
-  if (!travel) {
-    return res.status(404).json({ error: 'Travel not found' });
-  }
-  if (travel.userId !== userId) {
-    return res
-      .status(403)
-      .json({ error: 'You are not authorized to edit this travel' });
-  }
+  db.get('SELECT * FROM travels WHERE id = ?', [id], (err, travel) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!travel) {
+      return res.status(404).json({ error: 'Travel not found' });
+    }
+    if (travel.userId !== userId) {
+      return res.status(403).json({ error: 'You are not authorized to edit this travel' });
+    }
 
-  try {
-    travel.title = title;
-    travel.story = story;
-    travel.visitedLocation = locationArray;
-    travel.isFav = isFav;
-    travel.image = image;
-    travel.visitedDate = visitedDate;
-    await travel.save();
-    res.status(200).json({ message: 'Travel updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const sql = `
+      UPDATE travels 
+      SET title = ?, story = ?, visitedLocation = ?, isFav = ?, image = ?, visitedDate = ?, updatedAt = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+
+    db.run(
+      sql,
+      [title, story, JSON.stringify(locationArray), isFav, image, visitedDate, id],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json({ message: 'Travel updated successfully' });
+      }
+    );
+  });
 };
 
 export const deleteTravel = async (req, res) => {
   const { id } = req.params;
   const { id: userId } = req.user;
-  const travel = await Travel.findByPk(id);
-  if (!travel) {
-    return res.status(404).json({ error: 'Travel not found' });
-  }
-  if (travel.userId !== userId) {
-    return res
-      .status(403)
-      .json({ error: 'You are not authorized to delete this travel' });
-  }
-  try {
+
+  db.get('SELECT * FROM travels WHERE id = ?', [id], (err, travel) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!travel) {
+      return res.status(404).json({ error: 'Travel not found' });
+    }
+    if (travel.userId !== userId) {
+      return res.status(403).json({ error: 'You are not authorized to delete this travel' });
+    }
+
     const imageUrl = travel.image;
     const filename = path.basename(imageUrl);
     const filePath = path.join(__dirname, '../uploads', filename);
+    
     fs.unlink(filePath, (err) => {
       if (err) {
-        return res.status(500).json({ error: err.message });
+        console.error('Error deleting file:', err);
       }
     });
 
-    await travel.destroy();
-    res.status(200).json({ message: 'Travel deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    db.run('DELETE FROM travels WHERE id = ?', [id], (err) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.status(200).json({ message: 'Travel deleted successfully' });
+    });
+  });
 };
 
 export const editFav = async (req, res) => {
   const { isFav } = req.body;
   const { id } = req.params;
   const { id: userId } = req.user;
-  const travel = await Travel.findByPk(id);
-  if (!travel) {
-    return res.status(404).json({ error: 'Travel not found' });
-  }
 
-  try {
-    travel.isFav = isFav;
-    await travel.save();
-    res.status(200).json({ message: 'Favorite status updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  db.get('SELECT * FROM travels WHERE id = ?', [id], (err, travel) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!travel) {
+      return res.status(404).json({ error: 'Travel not found' });
+    }
+
+    db.run(
+      'UPDATE travels SET isFav = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+      [isFav, id],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json({ message: 'Favorite status updated successfully' });
+      }
+    );
+  });
 };
 
 export const searchTravel = async (req, res) => {
@@ -151,32 +166,24 @@ export const searchTravel = async (req, res) => {
     return res.status(400).json({ error: 'Search query is required' });
   }
 
-  try {
-    const travels = await Travel.findAll({
-      where: {
-        [Op.or]: [
-          Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('title')), {
-            [Op.like]: `%${query.toLowerCase()}%`,
-          }),
-          Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('story')), {
-            [Op.like]: `%${query.toLowerCase()}%`,
-          }),
-          Sequelize.where(
-            Sequelize.fn('LOWER', Sequelize.col('visitedLocation')),
-            {
-              [Op.like]: `%${query.toLowerCase()}%`,
-            }
-          ),
-        ],
-      },
-      raw: true,
-    });
+  const searchQuery = `%${query.toLowerCase()}%`;
+  const sql = `
+    SELECT * FROM travels 
+    WHERE LOWER(title) LIKE ? 
+    OR LOWER(story) LIKE ? 
+    OR LOWER(visitedLocation) LIKE ?
+  `;
+
+  db.all(sql, [searchQuery, searchQuery, searchQuery], (err, travels) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
     const transformedTravels = travels.map((travel) => ({
       ...travel,
       visitedLocation: JSON.parse(travel.visitedLocation),
     }));
+    
     res.status(200).json(transformedTravels);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  });
 };

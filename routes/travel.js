@@ -7,7 +7,7 @@ import {
   editFav,
   searchTravel,
 } from '../controllers/travel.js';
-import { authenticatedToken } from '../utilites.js';
+import {} from '../utilites.js';
 import fs from 'fs';
 import path from 'path';
 import upload from '../multer.js';
@@ -16,18 +16,19 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
-
-router.post('/add-travel', authenticatedToken, addTravel);
+import auth from '../middleware/auth.js';
+router.use(auth); // Protect all
+router.post('/add-travel', addTravel);
 
 // get all travels
 
-router.get('/get-all-travels', authenticatedToken, getTravels);
+router.get('/get-all-travels', getTravels);
 
-router.put('/update-travel/:id', authenticatedToken, editTravel);
-router.delete('/delete-travel/:id', authenticatedToken, deleteTravel);
+router.put('/update-travel/:id', editTravel);
+router.delete('/delete-travel/:id', deleteTravel);
 
-router.put('/update-is-fav/:id', authenticatedToken, editFav);
-router.post('/search', authenticatedToken, searchTravel);
+router.put('/update-is-fav/:id', editFav);
+router.post('/search', searchTravel);
 
 // image upload
 
@@ -36,10 +37,11 @@ router.post('/image-upload', upload.single('image'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://back-blog-2-gdeh.onrender.com'
-      : process.env.BASE_URL;
-    
+    const baseUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://back-blog-2-gdeh.onrender.com'
+        : process.env.BASE_URL;
+
     const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
     res.status(200).json({ imageUrl });
   } catch (error) {
