@@ -7,7 +7,6 @@ import {
   editFav,
   searchTravel,
 } from '../controllers/travel.js';
-import {} from '../utilites.js';
 import fs from 'fs';
 import path from 'path';
 import upload from '../multer.js';
@@ -17,10 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
 import auth from '../middleware/auth.js';
-router.use(auth); // Protect all
-router.post('/add-travel', addTravel);
+router.use(auth);
 
-// get all travels
+router.post('/add-travel', addTravel);
 
 router.get('/get-all-travels', getTravels);
 

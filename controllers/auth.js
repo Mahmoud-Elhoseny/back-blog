@@ -14,7 +14,6 @@ export const register = async (req, res) => {
   }
 
   try {
-    // Check if user already exists
     db.get(
       'SELECT * FROM users WHERE email = ? OR username = ?',
       [email, username],
@@ -26,11 +25,9 @@ export const register = async (req, res) => {
           return res.status(400).json({ error: 'User already exists' });
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user
         const sql = `
           INSERT INTO users (username, email, password)
           VALUES (?, ?, ?)
