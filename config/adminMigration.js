@@ -1,55 +1,27 @@
-import db from './database.js';
+import User from '../models/User.js';
+import bcrypt from 'bcrypt';
 
-const createAdminMigration = async () => {
-  return new Promise((resolve, reject) => {
-    // First check if isAdmin column exists
-    db.all("PRAGMA table_info(users)", (err, rows) => {
-      if (err) {
-        console.error('Error checking table info:', err);
-        reject(err);
-        return;
-      }
-
-      // Check if isAdmin column already exists
-      const hasIsAdmin = rows.some(row => row.name === 'isAdmin');
-      
-      if (!hasIsAdmin) {
-        // Add isAdmin column if it doesn't exist
-        db.run(
-          `ALTER TABLE users ADD COLUMN isAdmin INTEGER DEFAULT 0`,
-          (err) => {
-            if (err) {
-              console.error('Error adding isAdmin column:', err);
-              reject(err);
-              return;
-            }
-            setAdmin();
-          }
-        );
-      } else {
-        setAdmin();
+export async function createAdminMigration() {
+  try {
+    // Use Sequelize methods instead of SQLite's db.all
+    const adminExists = await User.findOne({
+      where: {
+        email: 'admin@example.com'
       }
     });
 
-    // Helper function to set admin user
-    function setAdmin() {
-      db.run(
-        `UPDATE users 
-         SET isAdmin = 1 
-         WHERE email = ? AND username = ?`,
-        ['elhoseny916@gmail.com', 'elhoseny'],
-        (err) => {
-          if (err) {
-            console.error('Error setting admin user:', err);
-            reject(err);
-            return;
-          }
-          console.log('Admin migration completed');
-          resolve();
-        }
-      );
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await User.create({
+        username: 'admin',
+        email: 'admin@example.com',
+        password: hashedPassword,
+        role: 'admin'
+      });
+      console.log('Admin user created successfully');
     }
-  });
-};
-
-export default createAdminMigration;
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    throw error;
+  }
+}

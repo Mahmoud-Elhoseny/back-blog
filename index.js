@@ -7,7 +7,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
 import fs from 'fs';
-import initDatabase from './config/initDatabase.js';
+import {initDatabase} from './config/initDatabase.js';
+import { EventEmitter } from 'events';
 
 dotenv.config();
 
@@ -50,3 +51,5 @@ initDatabase()
     console.error('Failed to initialize database:', error);
     process.exit(1);
   });
+
+EventEmitter.defaultMaxListeners = 15;

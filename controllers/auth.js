@@ -1,58 +1,27 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../config/database.js';
-import dotenv from 'dotenv';
+import User from '../models/User.js';
 
-dotenv.config();
 export const register = async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
-    return res
-      .status(400)
-      .json({ error: 'Please fill in all required fields.' });
+    return res.status(400).json({ error: 'Please fill in all required fields.' });
   }
 
   try {
-    db.get(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [email, username],
-      async (err, user) => {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        if (user) {
-          return res.status(400).json({ error: 'User already exists' });
-        }
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-        const sql = `
-          INSERT INTO users (username, email, password)
-          VALUES (?, ?, ?)
-        `;
+    const user = await User.create({ username, email, password: hashedPassword });
+    const token = jwt.sign({ id: user.id, username }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-        db.run(sql, [username, email, hashedPassword], function (err) {
-          if (err) {
-            return res.status(500).json({ error: err.message });
-          }
-
-          const token = jwt.sign(
-            { id: this.lastID, username },
-            process.env.JWT_SECRET,
-            { expiresIn: '30d' }
-          );
-
-          res.status(201).json({
-            id: this.lastID,
-            username,
-            email,
-            token,
-          });
-        });
-      }
-    );
+    res.status(201).json({ id: user.id, username, email, token });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
