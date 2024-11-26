@@ -81,8 +81,10 @@ export const editTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    if (!user.isAdmin && travel.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized to edit this travel' });
+    if (!user.isAdmin) {
+      if (travel.userId !== userId) {
+        return res.status(403).json({ error: 'You can only edit your own travel posts' });
+      }
     }
 
     await travel.update({
@@ -111,8 +113,10 @@ export const deleteTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    if (!user.isAdmin && travel.userId !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
+    if (!user.isAdmin) {
+      if (travel.userId !== userId) {
+        return res.status(403).json({ error: 'You can only delete your own travel posts' });
+      }
     }
 
     await travel.destroy();
