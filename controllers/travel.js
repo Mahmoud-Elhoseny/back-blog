@@ -1,5 +1,5 @@
 import { Travel, User, Favorite } from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 
 export const addTravel = async (req, res) => {
   try {
@@ -83,10 +83,10 @@ export const editTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    if (travel.userId !== userId) {
+    if (String(travel.userId) !== String(userId)) {
       return res
         .status(403)
-        .json({ error: 'You can only delete your own travel posts' });
+        .json({ error: 'You can only edit your own travel posts' });
     }
 
     await travel.update({
@@ -115,16 +115,10 @@ export const deleteTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    console.log('Travel userId:', travel.userId, typeof travel.userId);
-    console.log('Current userId:', userId, typeof userId);
-    console.log('Is admin:', user.isAdmin, typeof user.isAdmin);
-
-    if (!user.isAdmin) {
-      if (String(travel.userId) !== String(userId)) {
-        return res
-          .status(403)
-          .json({ error: 'You can only delete your own travel posts' });
-      }
+    if (!user.isAdmin && String(travel.userId) !== String(userId)) {
+      return res
+        .status(403)
+        .json({ error: 'You can only delete your own travel posts' });
     }
 
     await travel.destroy();
@@ -174,9 +168,21 @@ export const searchTravel = async (req, res) => {
     const travels = await Travel.findAll({
       where: {
         [Op.or]: [
-          { title: { [Op.iLike]: `%${query}%` } },
-          { story: { [Op.iLike]: `%${query}%` } },
-          { visitedLocation: { [Op.iLike]: `%${query}%` } },
+          Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('title')),
+            'LIKE',
+            `%${query.toLowerCase()}%`
+          ),
+          Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('story')),
+            'LIKE',
+            `%${query.toLowerCase()}%`
+          ),
+          Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('visitedLocation')),
+            'LIKE',
+            `%${query.toLowerCase()}%`
+          )
         ],
       },
     });
