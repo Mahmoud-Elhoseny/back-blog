@@ -11,11 +11,11 @@ import fs from 'fs';
 import path from 'path';
 import upload from '../multer.js';
 import { fileURLToPath } from 'url';
+import auth from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
-import auth from '../middleware/auth.js';
 router.use(auth);
 
 router.post('/add-travel', addTravel);

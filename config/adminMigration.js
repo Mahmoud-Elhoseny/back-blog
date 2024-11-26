@@ -3,20 +3,19 @@ import bcrypt from 'bcrypt';
 
 export async function createAdminMigration() {
   try {
-    // Use Sequelize methods instead of SQLite's db.all
     const adminExists = await User.findOne({
       where: {
-        email: 'admin@example.com'
-      }
+        email: 'elhoseny916@gmail.com',
+      },
     });
 
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash('123123123', 10);
       await User.create({
-        username: 'admin',
-        email: 'admin@example.com',
+        username: 'elhoseny',
+        email: 'elhoseny916@gmail.com',
         password: hashedPassword,
-        role: 'admin'
+        role: 'admin',
       });
       console.log('Admin user created successfully');
     }
