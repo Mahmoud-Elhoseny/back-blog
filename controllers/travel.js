@@ -1,15 +1,5 @@
 import { Travel, User, Favorite } from '../models/index.js';
-import { Op, Sequelize } from 'sequelize';
-
-const checkOwnership = async (travelId, userId) => {
-  const travel = await Travel.findByPk(travelId);
-  if (!travel) {
-    return { error: 'Travel not found', status: 404 };
-  }
-  
-  const isOwner = Number(travel.userId) === Number(userId);
-  return { travel, isOwner };
-};
+import { Op } from 'sequelize';
 
 export const addTravel = async (req, res) => {
   try {
@@ -79,22 +69,17 @@ export const getTravels = async (req, res) => {
 export const editTravel = async (req, res) => {
   try {
     const { title, story, visitedLocation, image, visitedDate } = req.body;
-    const { id: userId } = req.user;
-    const { id: travelId } = req.params;
-
-    const { travel, isOwner, error, status } = await checkOwnership(travelId, userId);
-    
-    if (error) {
-      return res.status(status).json({ error });
-    }
-
-    if (!isOwner) {
-      return res.status(403).json({ error: 'You can only edit your own travel posts' });
-    }
+    const { id } = req.params;
 
     const locationArray = Array.isArray(visitedLocation)
       ? visitedLocation
       : JSON.parse(visitedLocation);
+
+    const travel = await Travel.findByPk(id);
+
+    if (!travel) {
+      return res.status(404).json({ error: 'Travel not found' });
+    }
 
     await travel.update({
       title,
@@ -106,7 +91,6 @@ export const editTravel = async (req, res) => {
 
     res.status(200).json({ message: 'Travel updated successfully' });
   } catch (error) {
-    console.error('Edit travel error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -114,16 +98,11 @@ export const editTravel = async (req, res) => {
 export const deleteTravel = async (req, res) => {
   try {
     const { id: travelId } = req.params;
-    const { id: userId, isAdmin } = req.user;
 
-    const { travel, isOwner, error, status } = await checkOwnership(travelId, userId);
-    
-    if (error) {
-      return res.status(status).json({ error });
-    }
+    const travel = await Travel.findByPk(travelId);
 
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ error: 'You can only delete your own travel posts' });
+    if (!travel) {
+      return res.status(404).json({ error: 'Travel not found' });
     }
 
     await travel.destroy();
@@ -173,21 +152,9 @@ export const searchTravel = async (req, res) => {
     const travels = await Travel.findAll({
       where: {
         [Op.or]: [
-          Sequelize.where(
-            Sequelize.fn('LOWER', Sequelize.col('title')),
-            'LIKE',
-            `%${query.toLowerCase()}%`
-          ),
-          Sequelize.where(
-            Sequelize.fn('LOWER', Sequelize.col('story')),
-            'LIKE',
-            `%${query.toLowerCase()}%`
-          ),
-          Sequelize.where(
-            Sequelize.fn('LOWER', Sequelize.col('visitedLocation')),
-            'LIKE',
-            `%${query.toLowerCase()}%`
-          )
+          { title: { [Op.iLike]: `%${query}%` } },
+          { story: { [Op.iLike]: `%${query}%` } },
+          { visitedLocation: { [Op.iLike]: `%${query}%` } },
         ],
       },
     });
