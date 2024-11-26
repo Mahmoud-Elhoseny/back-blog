@@ -82,10 +82,11 @@ export const editTravel = async (req, res) => {
     }
 
     if (!user.isAdmin) {
-      if (travel.userId !== userId) {
-        return res.status(403).json({ error: 'You can only edit your own travel posts' });
+      if (String(travel.userId) !== String(userId)) {
+        return res.status(403).json({ error: 'You can only delete your own travel posts' });
       }
     }
+
 
     await travel.update({
       title,
@@ -113,8 +114,12 @@ export const deleteTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
+    console.log('Travel userId:', travel.userId, typeof travel.userId);
+    console.log('Current userId:', userId, typeof userId);
+    console.log('Is admin:', user.isAdmin, typeof user.isAdmin);
+
     if (!user.isAdmin) {
-      if (travel.userId !== userId) {
+      if (String(travel.userId) !== String(userId)) {
         return res.status(403).json({ error: 'You can only delete your own travel posts' });
       }
     }
@@ -122,6 +127,7 @@ export const deleteTravel = async (req, res) => {
     await travel.destroy();
     res.status(200).json({ message: 'Travel deleted successfully' });
   } catch (error) {
+    console.error('Delete travel error:', error);
     res.status(500).json({ error: error.message });
   }
 };
