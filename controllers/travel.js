@@ -22,17 +22,17 @@ export const addTravel = async (req, res) => {
       visitedLocation: locationArray,
       image,
       visitedDate,
-      userId
+      userId,
     });
 
     const travelWithFav = {
       ...travel.toJSON(),
-      isFav: false
+      isFav: false,
     };
 
     res.status(201).json({
       story: travelWithFav,
-      message: 'Travel added successfully.'
+      message: 'Travel added successfully.',
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -44,18 +44,20 @@ export const getTravels = async (req, res) => {
     const { id: userId } = req.user;
 
     const travels = await Travel.findAll({
-      include: [{
-        model: Favorite,
-        where: { userId },
-        required: false,
-        attributes: ['id']
-      }],
-      order: [['createdAt', 'DESC']]
+      include: [
+        {
+          model: Favorite,
+          where: { userId },
+          required: false,
+          attributes: ['id'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
     });
 
-    const transformedTravels = travels.map(travel => ({
+    const transformedTravels = travels.map((travel) => ({
       ...travel.toJSON(),
-      isFav: !!travel.Favorites?.length
+      isFav: !!travel.Favorites?.length,
     }));
 
     res.status(200).json(transformedTravels);
@@ -81,19 +83,18 @@ export const editTravel = async (req, res) => {
       return res.status(404).json({ error: 'Travel not found' });
     }
 
-    if (!user.isAdmin) {
-      if (String(travel.userId) !== String(userId)) {
-        return res.status(403).json({ error: 'You can only delete your own travel posts' });
-      }
+    if (travel.userId !== userId) {
+      return res
+        .status(403)
+        .json({ error: 'You can only delete your own travel posts' });
     }
-
 
     await travel.update({
       title,
       story,
       visitedLocation: locationArray,
       image,
-      visitedDate
+      visitedDate,
     });
 
     res.status(200).json({ message: 'Travel updated successfully' });
@@ -120,7 +121,9 @@ export const deleteTravel = async (req, res) => {
 
     if (!user.isAdmin) {
       if (String(travel.userId) !== String(userId)) {
-        return res.status(403).json({ error: 'You can only delete your own travel posts' });
+        return res
+          .status(403)
+          .json({ error: 'You can only delete your own travel posts' });
       }
     }
 
@@ -146,12 +149,12 @@ export const editFav = async (req, res) => {
 
     if (isFav) {
       await Favorite.findOrCreate({
-        where: { userId, travelId }
+        where: { userId, travelId },
       });
       res.status(200).json({ message: 'Added to favorites successfully' });
     } else {
       await Favorite.destroy({
-        where: { userId, travelId }
+        where: { userId, travelId },
       });
       res.status(200).json({ message: 'Removed from favorites successfully' });
     }
@@ -163,7 +166,7 @@ export const editFav = async (req, res) => {
 export const searchTravel = async (req, res) => {
   try {
     const { query } = req.query;
-    
+
     if (!query) {
       return res.status(400).json({ error: 'Search query is required' });
     }
@@ -173,9 +176,9 @@ export const searchTravel = async (req, res) => {
         [Op.or]: [
           { title: { [Op.iLike]: `%${query}%` } },
           { story: { [Op.iLike]: `%${query}%` } },
-          { visitedLocation: { [Op.iLike]: `%${query}%` } }
-        ]
-      }
+          { visitedLocation: { [Op.iLike]: `%${query}%` } },
+        ],
+      },
     });
 
     res.status(200).json(travels);
