@@ -10,7 +10,6 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await User.findByPk(decoded.id);
     
     if (!user) {
@@ -19,7 +18,8 @@ const auth = async (req, res, next) => {
 
     req.user = {
       id: user.id,
-      username: user.username
+      username: user.username,
+      isAdmin: user.isAdmin || false
     };
     next();
   } catch (error) {
