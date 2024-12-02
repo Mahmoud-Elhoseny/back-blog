@@ -15,15 +15,16 @@ dotenv.config();
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: 'https://front-blog-eight.vercel.app',
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://front-blog-eight.vercel.app'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
   maxAge: 7200,
 };
+
 
 app.use(cors(corsOptions));
 
@@ -40,7 +41,6 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Initialize database before starting the server
 initDatabase()
   .then(() => {
     app.listen(port, () => {

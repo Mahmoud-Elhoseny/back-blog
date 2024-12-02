@@ -4,6 +4,19 @@ import User from './User.js';
 import Favorite from './Favorite.js';
 
 const Travel = sequelize.define('Travel', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Users',
+      key: 'id',
+    },
+  },
   title: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -23,12 +36,10 @@ const Travel = sequelize.define('Travel', {
   visitedDate: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
+  }
 }, {
   timestamps: true,
+  tableName: 'Travels'
 });
-
-Travel.belongsTo(User);
-Travel.hasMany(Favorite);
 
 export default Travel;

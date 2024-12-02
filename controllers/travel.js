@@ -1,10 +1,12 @@
-import { Travel, User, Favorite } from '../models/index.js';
+import { Travel, Favorite } from '../models/index.js';
 import { Op } from 'sequelize';
 
 export const addTravel = async (req, res) => {
   try {
     const { title, story, visitedLocation, image, visitedDate } = req.body;
     const { id: userId } = req.user;
+    console.log(userId);
+    
 
     const locationArray = Array.isArray(visitedLocation)
       ? visitedLocation
@@ -35,6 +37,7 @@ export const addTravel = async (req, res) => {
       message: 'Travel added successfully.',
     });
   } catch (error) {
+    console.error('Error creating travel:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -52,7 +55,10 @@ export const getTravels = async (req, res) => {
           attributes: ['id'],
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [
+        [Favorite, 'id', 'DESC NULLS LAST'],
+        ['createdAt', 'DESC'],
+      ],
     });
 
     const transformedTravels = travels.map((travel) => ({
@@ -70,6 +76,7 @@ export const editTravel = async (req, res) => {
   try {
     const { title, story, visitedLocation, image, visitedDate } = req.body;
     const { id } = req.params;
+    const { id: userId, isAdmin } = req.user;
 
     const locationArray = Array.isArray(visitedLocation)
       ? visitedLocation
@@ -79,6 +86,10 @@ export const editTravel = async (req, res) => {
 
     if (!travel) {
       return res.status(404).json({ error: 'Travel not found' });
+    }
+
+    if (travel.userId !== userId && !isAdmin) {
+      return res.status(403).json({ error: 'You do not have permission to edit this travel' });
     }
 
     await travel.update({
@@ -98,11 +109,19 @@ export const editTravel = async (req, res) => {
 export const deleteTravel = async (req, res) => {
   try {
     const { id: travelId } = req.params;
-
+    const { id: userId, isAdmin } = req.user;
+    console.log(req.user);
+    
+    
     const travel = await Travel.findByPk(travelId);
+    console.log(travel.userId);
 
     if (!travel) {
       return res.status(404).json({ error: 'Travel not found' });
+    }
+
+    if (travel.userId !== userId && !isAdmin) {
+      return res.status(403).json({ error: 'You do not have permission to delete this travel' });
     }
 
     await travel.destroy();
@@ -118,6 +137,11 @@ export const editFav = async (req, res) => {
     const { isFav } = req.body;
     const { id: travelId } = req.params;
     const { id: userId } = req.user;
+    console.log(req.user);
+    
+    console.log(userId);
+    
+
 
     const travel = await Travel.findByPk(travelId);
 

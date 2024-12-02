@@ -15,12 +15,16 @@ export async function createAdminMigration() {
         username: 'elhoseny',
         email: 'elhoseny916@gmail.com',
         password: hashedPassword,
-        role: 'admin',
+        isAdmin: true,
       });
       console.log('Admin user created successfully');
     }
   } catch (error) {
-    console.error('Error creating admin user:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      console.error('Admin user already exists:', error);
+    } else {
+      console.error('Error creating admin user:', error);
+    }
     throw error;
   }
 }

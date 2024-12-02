@@ -13,6 +13,7 @@ const auth = async (req, res, next) => {
     const user = await User.findByPk(decoded.id);
     
     if (!user) {
+      console.error('User not found:', decoded.id);
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -23,6 +24,7 @@ const auth = async (req, res, next) => {
     };
     next();
   } catch (error) {
+    console.error('Authorization error:', error);
     res.status(401).json({ error: 'Request is not authorized' });
   }
 };
