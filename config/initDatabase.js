@@ -6,8 +6,6 @@ export async function initDatabase() {
     await sequelize.authenticate();
     console.log('Database connection established successfully');
     
-    // Drop existing tables
-    await sequelize.drop(); // This will drop all tables
     
     await sequelize.sync({ alter: true });
     console.log('Database models synchronized');
